@@ -1,0 +1,7 @@
+mongodb:
+    host: 43.165.185.58
+    port: 27017
+    database: test1
+    username: test1
+    password: L8cM3ei7YnwzjdBe
+    auth_source: test1
