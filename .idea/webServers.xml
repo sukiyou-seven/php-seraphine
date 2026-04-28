@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="d95936b8-bfeb-43c1-9a7f-63ae4f6bcff1" name="t1">
+        <fileTransfer rootFolder="/www/wwwroot/pay.rubyonly.cn" accessType="SFTP" host="8.137.185.2" port="22" sshConfigId="e100966e-138a-45db-841a-12059399fc2a" sshConfig="root@8.137.185.2:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
