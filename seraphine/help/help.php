@@ -6,14 +6,16 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 if ($action === 'get_db_config') {
     header('Content-Type: application/json');
     $dbConfigPath = __DIR__ . '/../../config/db.yml';
+    $dbMysqlConfigPath = __DIR__ . '/../../config/db_mysql.yml';
 
-    if (file_exists($dbConfigPath)) {
+    if (file_exists($dbConfigPath) ) {
         $content = file_get_contents($dbConfigPath);
         $config = parseYamlSimple($content);
 
         echo json_encode([
                 'success' => true,
-                'config' => isset($config['mongodb']) ? $config['mongodb'] : []
+                'mongodb' => isset($config['mongodb']) ? $config['mongodb'] : [],
+                'mysql' => isset($config['mysql']) ? $config['mysql'] : []
         ]);
     } else {
         echo json_encode([
@@ -24,8 +26,7 @@ if ($action === 'get_db_config') {
     exit;
 }
 
-if ($action === 'save_db_config') {
-//    echo "<script>alert($action) </script>";
+if ($action === 'save_mongodb_config') {
     header('Content-Type: application/json');
 
     $input = file_get_contents('php://input');
@@ -42,7 +43,13 @@ if ($action === 'save_db_config') {
     $dbConfigPath = __DIR__ . '/../../config/db.yml';
 
     try {
-        $yamlContent = generateYaml($config);
+        $existingConfig = [];
+        if (file_exists($dbConfigPath)) {
+            $content = file_get_contents($dbConfigPath);
+            $existingConfig = parseYamlSimple($content);
+        }
+
+        $yamlContent = generateMongoDbYaml($config, $existingConfig);
 
         if (file_put_contents($dbConfigPath, $yamlContent) !== false) {
             echo json_encode(['success' => true]);
@@ -61,7 +68,50 @@ if ($action === 'save_db_config') {
     exit;
 }
 
-function parseYamlSimple($content) {
+if ($action === 'save_mysql_config') {
+    header('Content-Type: application/json');
+
+    $input = file_get_contents('php://input');
+    $config = json_decode($input, true);
+
+    if (!$config) {
+        echo json_encode([
+                'success' => false,
+                'message' => 'data error'
+        ]);
+        exit;
+    }
+
+    $dbConfigPath = __DIR__ . '/../../config/db.yml';
+
+    try {
+        $existingConfig = [];
+        if (file_exists($dbConfigPath)) {
+            $content = file_get_contents($dbConfigPath);
+            $existingConfig = parseYamlSimple($content);
+        }
+
+        $yamlContent = generateMysqlYaml($config, $existingConfig);
+
+        if (file_put_contents($dbConfigPath, $yamlContent) !== false) {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode([
+                    'success' => false,
+                    'message' => 'write error'
+            ]);
+        }
+    } catch (Exception $e) {
+        echo json_encode([
+                'success' => false,
+                'message' => $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+function parseYamlSimple($content)
+{
     $result = [];
     $lines = explode("\n", $content);
     $currentSection = null;
@@ -84,14 +134,49 @@ function parseYamlSimple($content) {
     return $result;
 }
 
-function generateYaml($config) {
-    $yaml = "mongodb:\n";
+function generateMongoDbYaml($config, $existingConfig)
+{
+    $yaml = "";
+
+    if (isset($existingConfig['mysql']) && !empty($existingConfig['mysql'])) {
+        $yaml .= "mysql:\n";
+        foreach ($existingConfig['mysql'] as $key => $value) {
+            $yaml .= "    {$key}: {$value}\n";
+        }
+        $yaml .= "\n";
+    }
+
+    $yaml .= "mongodb:\n";
     $yaml .= "    host: " . (isset($config['host']) ? $config['host'] : 'localhost') . "\n";
     $yaml .= "    port: " . (isset($config['port']) ? $config['port'] : '27017') . "\n";
     $yaml .= "    database: " . (isset($config['database']) ? $config['database'] : 'test') . "\n";
     $yaml .= "    username: " . (isset($config['username']) ? $config['username'] : '') . "\n";
     $yaml .= "    password: " . (isset($config['password']) ? $config['password'] : '') . "\n";
     $yaml .= "    auth_source: " . (isset($config['auth_source']) ? $config['auth_source'] : 'admin') . "\n";
+
+    return $yaml;
+}
+
+function generateMysqlYaml($config, $existingConfig)
+{
+    $yaml = "";
+
+    if (isset($existingConfig['mongodb']) && !empty($existingConfig['mongodb'])) {
+        $yaml .= "mongodb:\n";
+        foreach ($existingConfig['mongodb'] as $key => $value) {
+            $yaml .= "    {$key}: {$value}\n";
+        }
+        $yaml .= "\n";
+    }
+
+    $yaml .= "mysql:\n";
+    $yaml .= "    host: " . (isset($config['host']) ? $config['host'] : 'localhost') . "\n";
+    $yaml .= "    port: " . (isset($config['port']) ? $config['port'] : '3306') . "\n";
+    $yaml .= "    database: " . (isset($config['database']) ? $config['database'] : 'test') . "\n";
+    $yaml .= "    username: " . (isset($config['username']) ? $config['username'] : '') . "\n";
+    $yaml .= "    password: " . (isset($config['password']) ? $config['password'] : '') . "\n";
+    $yaml .= "    charset: " . (isset($config['charset']) ? $config['charset'] : 'utf8mb4') . "\n";
+    $yaml .= "    time_zone: " . (isset($config['time_zone']) ? $config['time_zone'] : '+08:00') . "\n";
 
     return $yaml;
 }
@@ -106,291 +191,7 @@ $baseUrl .= $_SERVER['HTTP_HOST'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seraphine 帮助 文档</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 40px 20px;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: flex;
-            gap: 30px;
-        }
-
-        .sidebar {
-            position: fixed;
-            left: 20px;
-            top: 40px;
-            width: 250px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            padding: 25px;
-            max-height: calc(100vh - 80px);
-            overflow-y: auto;
-            z-index: 100;
-        }
-
-        .sidebar h3 {
-            color: #667eea;
-            font-size: 1.2em;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #667eea;
-        }
-
-        .nav-list {
-            list-style: none;
-        }
-
-        .nav-list li {
-            margin-bottom: 8px;
-        }
-
-        .nav-list a {
-            display: block;
-            padding: 10px 15px;
-            color: #4a5568;
-            text-decoration: none;
-            border-radius: 6px;
-            transition: all 0.3s ease;
-            font-size: 0.95em;
-        }
-
-        .nav-list a:hover {
-            background: #f7fafc;
-            color: #667eea;
-            transform: translateX(5px);
-        }
-
-        .nav-list a.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            font-weight: 500;
-        }
-
-        .main-content {
-            flex: 1;
-            margin-left: 280px;
-        }
-
-        .header {
-            text-align: center;
-            color: white;
-            margin-bottom: 40px;
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-
-        .card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            padding: 30px;
-            margin-bottom: 30px;
-            transition: transform 0.3s ease;
-            scroll-margin-top: 20px;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-        }
-
-        .card h2 {
-            color: #667eea;
-            font-size: 1.8em;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 3px solid #667eea;
-        }
-
-        .section {
-            margin-bottom: 25px;
-        }
-
-        .section h3 {
-            color: #333;
-            font-size: 1.3em;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-        }
-
-        .section h3::before {
-            content: "▸";
-            margin-right: 10px;
-            color: #667eea;
-            font-size: 1.2em;
-        }
-
-        .route-example {
-            background: #f7f9fc;
-            border-left: 4px solid #667eea;
-            padding: 15px 20px;
-            margin: 15px 0;
-            border-radius: 5px;
-            font-family: 'Courier New', monospace;
-        }
-
-        .route-example .url {
-            color: #e74c3c;
-            font-weight: bold;
-            font-size: 1.1em;
-        }
-
-        .file-tree {
-            background: #2d3748;
-            color: #e2e8f0;
-            padding: 20px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            line-height: 1.8;
-            overflow-x: auto;
-        }
-
-        .file-tree .dir {
-            color: #63b3ed;
-        }
-
-        .file-tree .file {
-            color: #fbbf24;
-        }
-
-        .file-tree .class {
-            color: #9ae6b4;
-        }
-
-        .file-tree .method {
-            color: #f687b3;
-        }
-
-        .info-box {
-            background: #ebf8ff;
-            border: 1px solid #90cdf4;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 15px 0;
-        }
-
-        .info-box.warning {
-            background: #fffaf0;
-            border-color: #fbd38d;
-        }
-
-        .info-box strong {
-            color: #2b6cb0;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 4px 12px;
-            background: #667eea;
-            color: white;
-            border-radius: 20px;
-            font-size: 0.85em;
-            margin-left: 10px;
-        }
-
-        code {
-            background: #edf2f7;
-            padding: 2px 8px;
-            border-radius: 4px;
-            color: #e53e3e;
-            font-family: 'Courier New', monospace;
-        }
-
-        @media (max-width: 1024px) {
-            .sidebar {
-                display: none;
-            }
-
-            .main-content {
-                margin-left: 0;
-            }
-
-            .container {
-                display: block;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 2em;
-            }
-
-            .card {
-                padding: 20px;
-            }
-        }
-
-        .sst {
-            display: block;
-        }
-
-        .con {
-            margin-left: 20px;
-        }
-
-        .file {
-            margin-left: 40px;
-        }
-
-        .classt {
-            margin-left: 60px;
-        }
-
-        .method {
-            margin-left: 80px;
-        }
-
-        .back-to-top {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5em;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-            z-index: 999;
-        }
-
-        .back-to-top:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-        }
-
-        .back-to-top.show {
-            display: flex;
-        }
-    </style>
+    <link rel="stylesheet" href="../../static/css/help.css">
 </head>
 <body>
 <div class="sidebar">
@@ -421,54 +222,118 @@ $baseUrl .= $_SERVER['HTTP_HOST'];
     </div>
 
     <div class="card" id="setting">
-        <h2>⚙ MongoDB 数据库设置</h2>
-        <div class="route-example">
-            <form id="db-config-form" style="max-width: 600px;">
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Host:</label>
-                    <input type="text" id="db-host" name="host" placeholder="例如: localhost"
-                           style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;" />
-                </div>
+        <h2>⚙ 数据库设置</h2>
 
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Port:</label>
-                    <input type="number" id="db-port" name="port" placeholder="例如: 27017"
-                           style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;" />
-                </div>
+        <div style="margin-bottom: 30px;">
+            <h3 style="color: #667eea; margin-bottom: 15px;">MongoDB 配置</h3>
+            <div class="route-example">
+                <form id="mongodb-config-form" style="max-width: 600px;">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Host:</label>
+                        <input type="text" id="mongodb-host" name="host" placeholder="例如: localhost"
+                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;"/>
+                    </div>
 
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Database:</label>
-                    <input type="text" id="db-database" name="database" placeholder="例如: mydb"
-                           style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;" />
-                </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Port:</label>
+                        <input type="number" id="mongodb-port" name="port" placeholder="例如: 27017"
+                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;"/>
+                    </div>
 
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Username:</label>
-                    <input type="text" id="db-username" name="username" placeholder="用户名（可选）"
-                           style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;" />
-                </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Database:</label>
+                        <input type="text" id="mongodb-database" name="database" placeholder="例如: mydb"
+                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;"/>
+                    </div>
 
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Password:</label>
-                    <input type="password" id="db-password" name="password" placeholder="密码（可选）"
-                           style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;" />
-                </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Username:</label>
+                        <input type="text" id="mongodb-username" name="username" placeholder="用户名（可选）"
+                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;"/>
+                    </div>
 
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Auth Source:</label>
-                    <input type="text" id="db-auth-source" name="auth_source" placeholder="例如: admin"
-                           style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;" />
-                </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Password:</label>
+                        <input type="password" id="mongodb-password" name="password" placeholder="密码（可选）"
+                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;"/>
+                    </div>
 
-                <button type="submit" style="padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 600; transition: all 0.3s ease;">
-                    💾 保存配置
-                </button>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Auth
+                            Source:</label>
+                        <input type="text" id="mongodb-auth-source" name="auth_source" placeholder="例如: admin"
+                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;"/>
+                    </div>
 
-                <div id="save-result" style="margin-top: 15px; padding: 10px; border-radius: 6px; display: none;"></div>
-            </form>
+                    <button type="submit"
+                            style="padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 600; transition: all 0.3s ease;">
+                        💾 保存 MongoDB 配置
+                    </button>
+
+                    <div id="mongodb-save-result"
+                         style="margin-top: 15px; padding: 10px; border-radius: 6px; display: none;"></div>
+                </form>
+            </div>
+        </div>
+
+        <div>
+            <h3 style="color: #667eea; margin-bottom: 15px;">MySQL 配置</h3>
+            <div class="route-example">
+                <form id="mysql-config-form" style="max-width: 600px;">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Host:</label>
+                        <input type="text" id="mysql-host" name="host" placeholder="例如: localhost"
+                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;"/>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Port:</label>
+                        <input type="number" id="mysql-port" name="port" placeholder="例如: 3306"
+                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;"/>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Database:</label>
+                        <input type="text" id="mysql-database" name="database" placeholder="例如: mydb"
+                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;"/>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Username:</label>
+                        <input type="text" id="mysql-username" name="username" placeholder="用户名（可选）"
+                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;"/>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Password:</label>
+                        <input type="password" id="mysql-password" name="password" placeholder="密码（可选）"
+                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;"/>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Charset:</label>
+                        <input type="text" id="mysql-charset" name="charset" placeholder="例如: utf8mb4"
+                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;"/>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: #667eea; font-weight: 600;">Time
+                            Zone:</label>
+                        <input type="text" id="mysql-time-zone" name="time_zone" placeholder="例如: +08:00"
+                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 1em;"/>
+                    </div>
+
+                    <button type="submit"
+                            style="padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 600; transition: all 0.3s ease;">
+                        💾 保存 MySQL 配置
+                    </button>
+
+                    <div id="mysql-save-result"
+                         style="margin-top: 15px; padding: 10px; border-radius: 6px; display: none;"></div>
+                </form>
+            </div>
         </div>
     </div>
-
 
 
     <div class="card" id="routing">
@@ -560,6 +425,24 @@ $baseUrl .= $_SERVER['HTTP_HOST'];
                 $user = $mongo->findOne('users', ['name' => 'admin']);<br><br>
                 // 更新数据<br>
                 $mongo->updateOne('users', ['name' => 'admin'], ['$set' => ['age' => 25]]);
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🗄️ MySQL 数据库</h3>
+            <div class="route-example">
+                require __DIR__ . '/../../seraphine/database/mysql_client.php';<br><br>
+                $mysql = new MySQLClient();<br><br>
+                // 插入数据<br>
+                $result = $mysql->insertOne('users', ['name' => 'admin', 'email' => 'admin@example.com']);<br><br>
+                // 查询数据<br>
+                $user = $mysql->findOne('users', ['name' => 'admin']);<br><br>
+                // 更新数据<br>
+                $mysql->update('users', ['age' => 25], ['name' => 'admin']);<br><br>
+                // 事务操作<br>
+                $mysql->beginTransaction();<br>
+                // ... 执行多个操作 ...<br>
+                $mysql->commit();
             </div>
         </div>
 
@@ -703,47 +586,73 @@ $baseUrl .= $_SERVER['HTTP_HOST'];
         });
 
 
-        document.addEventListener('DOMContentLoaded', function() {
-            loadDbConfig();
+        document.addEventListener('DOMContentLoaded', function () {
+            loadMongoDbConfig();
+            loadMysqlConfig();
 
-            const dbForm = document.getElementById('db-config-form');
-            if (dbForm) {
-                dbForm.addEventListener('submit', function(e) {
+            const mongodbForm = document.getElementById('mongodb-config-form');
+            if (mongodbForm) {
+                mongodbForm.addEventListener('submit', function (e) {
                     e.preventDefault();
-                    saveDbConfig();
+                    saveMongoDbConfig();
+                });
+            }
+
+            const mysqlForm = document.getElementById('mysql-config-form');
+            if (mysqlForm) {
+                mysqlForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    saveMysqlConfig();
                 });
             }
         });
 
-        function loadDbConfig() {
+        function loadMongoDbConfig() {
             fetch('?action=get_db_config')
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success && data.config) {
-                        document.getElementById('db-host').value = data.config.host || '';
-                        document.getElementById('db-port').value = data.config.port || '';
-                        document.getElementById('db-database').value = data.config.database || '';
-                        document.getElementById('db-username').value = data.config.username || '';
-                        document.getElementById('db-password').value = data.config.password || '';
-                        document.getElementById('db-auth-source').value = data.config.auth_source || '';
+                    if (data.success && data.mongodb) {
+                        document.getElementById('mongodb-host').value = data.mongodb.host || '';
+                        document.getElementById('mongodb-port').value = data.mongodb.port || '';
+                        document.getElementById('mongodb-database').value = data.mongodb.database || '';
+                        document.getElementById('mongodb-username').value = data.mongodb.username || '';
+                        document.getElementById('mongodb-password').value = data.mongodb.password || '';
+                        document.getElementById('mongodb-auth-source').value = data.mongodb.auth_source || '';
                     }
                 })
-                .catch(error => console.error('加载配置失败:', error));
+                .catch(error => console.error('加载 MongoDB 配置失败:', error));
         }
 
-        function saveDbConfig() {
+        function loadMysqlConfig() {
+            fetch('?action=get_db_config')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.mysql) {
+                        document.getElementById('mysql-host').value = data.mysql.host || '';
+                        document.getElementById('mysql-port').value = data.mysql.port || '';
+                        document.getElementById('mysql-database').value = data.mysql.database || '';
+                        document.getElementById('mysql-username').value = data.mysql.username || '';
+                        document.getElementById('mysql-password').value = data.mysql.password || '';
+                        document.getElementById('mysql-charset').value = data.mysql.charset || '';
+                        document.getElementById('mysql-time-zone').value = data.mysql.time_zone || '';
+                    }
+                })
+                .catch(error => console.error('加载 MySQL 配置失败:', error));
+        }
+
+        function saveMongoDbConfig() {
             const config = {
-                host: document.getElementById('db-host').value,
-                port: document.getElementById('db-port').value,
-                database: document.getElementById('db-database').value,
-                username: document.getElementById('db-username').value,
-                password: document.getElementById('db-password').value,
-                auth_source: document.getElementById('db-auth-source').value
+                host: document.getElementById('mongodb-host').value,
+                port: document.getElementById('mongodb-port').value,
+                database: document.getElementById('mongodb-database').value,
+                username: document.getElementById('mongodb-username').value,
+                password: document.getElementById('mongodb-password').value,
+                auth_source: document.getElementById('mongodb-auth-source').value
             };
 
-            const resultDiv = document.getElementById('save-result');
+            const resultDiv = document.getElementById('mongodb-save-result');
 
-            fetch('?action=save_db_config', {
+            fetch('?action=save_mongodb_config', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -756,7 +665,56 @@ $baseUrl .= $_SERVER['HTTP_HOST'];
                     if (data.success) {
                         resultDiv.style.background = '#d1fae5';
                         resultDiv.style.color = '#065f46';
-                        resultDiv.textContent = '✅ 配置保存成功！';
+                        resultDiv.textContent = '✅ MongoDB 配置保存成功！';
+                    } else {
+                        resultDiv.style.background = '#fee2e2';
+                        resultDiv.style.color = '#991b1b';
+                        resultDiv.textContent = '❌ 保存失败: ' + (data.message || '未知错误');
+                    }
+
+                    setTimeout(() => {
+                        resultDiv.style.display = 'none';
+                    }, 3000);
+                })
+                .catch(error => {
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.background = '#fee2e2';
+                    resultDiv.style.color = '#991b1b';
+                    resultDiv.textContent = '❌ 网络错误: ' + error.message;
+
+                    setTimeout(() => {
+                        resultDiv.style.display = 'none';
+                    }, 3000);
+                });
+        }
+
+        function saveMysqlConfig() {
+            const config = {
+                host: document.getElementById('mysql-host').value,
+                port: document.getElementById('mysql-port').value,
+                database: document.getElementById('mysql-database').value,
+                username: document.getElementById('mysql-username').value,
+                password: document.getElementById('mysql-password').value,
+                charset: document.getElementById('mysql-charset').value,
+                time_zone: document.getElementById('mysql-time-zone').value
+            };
+
+            const resultDiv = document.getElementById('mysql-save-result');
+
+            fetch('?action=save_mysql_config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(config)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    resultDiv.style.display = 'block';
+                    if (data.success) {
+                        resultDiv.style.background = '#d1fae5';
+                        resultDiv.style.color = '#065f46';
+                        resultDiv.textContent = '✅ MySQL 配置保存成功！';
                     } else {
                         resultDiv.style.background = '#fee2e2';
                         resultDiv.style.color = '#991b1b';

@@ -701,6 +701,10 @@ class AutoApiDoc
     </div>
 
     <div class="stats">
+    <div class="stat-item">
+            <div class="stat-number">POST</div>
+            <div class="stat-label">请求方式</div>
+        </div>
         <div class="stat-item">
             <div class="stat-number">' . count($this->apiList) . '</div>
             <div class="stat-label">控制器</div>

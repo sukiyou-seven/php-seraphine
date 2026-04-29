@@ -1,0 +1,283 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 40px 20px;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    gap: 30px;
+}
+
+.sidebar {
+    position: fixed;
+    left: 20px;
+    top: 40px;
+    width: 250px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    padding: 25px;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+    z-index: 100;
+}
+
+.sidebar h3 {
+    color: #667eea;
+    font-size: 1.2em;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #667eea;
+}
+
+.nav-list {
+    list-style: none;
+}
+
+.nav-list li {
+    margin-bottom: 8px;
+}
+
+.nav-list a {
+    display: block;
+    padding: 10px 15px;
+    color: #4a5568;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    font-size: 0.95em;
+}
+
+.nav-list a:hover {
+    background: #f7fafc;
+    color: #667eea;
+    transform: translateX(5px);
+}
+
+.nav-list a.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 500;
+}
+
+.main-content {
+    flex: 1;
+    margin-left: 280px;
+}
+
+.header {
+    text-align: center;
+    color: white;
+    margin-bottom: 40px;
+}
+
+.header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.header p {
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    padding: 30px;
+    margin-bottom: 30px;
+    transition: transform 0.3s ease;
+    scroll-margin-top: 20px;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card h2 {
+    color: #667eea;
+    font-size: 1.8em;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 3px solid #667eea;
+}
+
+.section {
+    margin-bottom: 25px;
+}
+
+.section h3 {
+    color: #333;
+    font-size: 1.3em;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.section h3::before {
+    content: "▸";
+    margin-right: 10px;
+    color: #667eea;
+    font-size: 1.2em;
+}
+
+.route-example {
+    background: #f7f9fc;
+    border-left: 4px solid #667eea;
+    padding: 15px 20px;
+    margin: 15px 0;
+    border-radius: 5px;
+    font-family: 'Courier New', monospace;
+}
+
+.route-example .url {
+    color: #e74c3c;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.file-tree {
+    background: #2d3748;
+    color: #e2e8f0;
+    padding: 20px;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    line-height: 1.8;
+    overflow-x: auto;
+}
+
+.file-tree .dir {
+    color: #63b3ed;
+}
+
+.file-tree .file {
+    color: #fbbf24;
+}
+
+.file-tree .class {
+    color: #9ae6b4;
+}
+
+.file-tree .method {
+    color: #f687b3;
+}
+
+.info-box {
+    background: #ebf8ff;
+    border: 1px solid #90cdf4;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.info-box.warning {
+    background: #fffaf0;
+    border-color: #fbd38d;
+}
+
+.info-box strong {
+    color: #2b6cb0;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: #667eea;
+    color: white;
+    border-radius: 20px;
+    font-size: 0.85em;
+    margin-left: 10px;
+}
+
+code {
+    background: #edf2f7;
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: #e53e3e;
+    font-family: 'Courier New', monospace;
+}
+
+@media (max-width: 1024px) {
+    .sidebar {
+        display: none;
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+
+    .container {
+        display: block;
+    }
+}
+
+@media (max-width: 768px) {
+    .header h1 {
+        font-size: 2em;
+    }
+
+    .card {
+        padding: 20px;
+    }
+}
+
+.sst {
+    display: block;
+}
+
+.con {
+    margin-left: 20px;
+}
+
+.file {
+    margin-left: 40px;
+}
+
+.classt {
+    margin-left: 60px;
+}
+
+.method {
+    margin-left: 80px;
+}
+
+.back-to-top {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5em;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+    z-index: 999;
+}
+
+.back-to-top:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.back-to-top.show {
+    display: flex;
+}

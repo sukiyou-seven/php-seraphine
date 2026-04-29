@@ -66,7 +66,7 @@ error_page 320 /320.php;
 使用其他配置文件 请自行编写文件读取函数
 
 ### 数据库
-默认使用 mongodb 数据库 
-
-config/db.yml 至少需要 [775] 权限
+- 默认使用 mongodb 数据库 
+- config/db.yml 至少需要 [775] 权限
+- 0.0.2 增加了mysql支持
 
