@@ -42,9 +42,3 @@ class User
             "e"=>"dd");
     }
 }
-
-
-//$a = new User();
-//$res = $a->login();
-//
-//print_r($res);

@@ -222,9 +222,9 @@ $baseUrl .= $_SERVER['HTTP_HOST'];
     <div class="card" id="api-doc">
         <h2>📚 API 接口文档</h2>
         <div class="route-example">
-            <div><strong>访问地址：</strong><a href="<?php echo $baseUrl; ?>/openapi" target="_blank"
+            <div><strong>访问地址：</strong><a href="<?php echo $baseUrl; ?>/openapi2.0" target="_blank"
                                               style="color: #667eea; text-decoration: none;">
-                    <?php echo $baseUrl; ?>/openapi</a></div>
+                    <?php echo $baseUrl; ?>/openapi2.0</a></div>
             <div style="margin-top: 10px; color: #718096;">自动生成 · 实时同步 · 完整详细· <code>完成本页面后回来再看</code></div>
         </div>
     </div>
@@ -240,7 +240,7 @@ $baseUrl .= $_SERVER['HTTP_HOST'];
     </div>
 
 
-    <div class="card" id="mysql_setting">
+    <div class="card" id="mongodb_setting">
         <h2>📦 MongoDB数据库设置</h2>
 
         <div style="margin-bottom: 30px;">
@@ -295,7 +295,7 @@ $baseUrl .= $_SERVER['HTTP_HOST'];
         </div>
 
     </div>
-    <div class="card" id="mongodb_setting">
+    <div class="card" id="mysql_setting">
         <h2>📦 Mysql 数据库设置</h2>
 
 

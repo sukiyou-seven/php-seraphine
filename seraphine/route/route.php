@@ -16,7 +16,26 @@ $app_config = ReadConfig::read_yml("app");
 if ($uri == 'upload') {
     return require __DIR__ . "/../tools/t_upload/t_upload.php";
 }
-if ($uri == "openapi") {
+
+
+# 阻止 GET 请求
+if (!$app_config['app']['debug']) {
+    if ($_SERVER['REQUEST_METHOD'] == 'GET') {
+        # 将 get 请求 重定向到
+        # 可用的已装修页面 320 403 404 500 502
+        http_response_code(404);
+        exit;
+    }
+}
+
+# 以下须 开启 debug 模式
+
+if ($uri == "openapi2.0") {
+    # 返回vue打包后文件
+    return require __DIR__ . "/../auto_api/dist/index.html";
+}
+if ($uri == "openapi1.0") {
+    # 返回php文件
     return require __DIR__ . "/../auto_api/openapi.php";
 }
 
@@ -37,24 +56,18 @@ if ($uri == "open_api") {
     return;
 }
 
-# 阻止 GET 请求
-if (!$app_config['app']['debug']) {
-    if ($_SERVER['REQUEST_METHOD'] == 'GET') {
-        # 将 get 请求 重定向到
-        # 可用的已装修页面 320 403 404 500 502
-        http_response_code(404);
-        exit;
-    }
-}
-
 if ($uri == "help") {
+    require_once __DIR__ . "/../config/read_config.php";
+    $host_name = $_SERVER['HTTP_HOST'];
+    $rc = new ReadConfig();
+    $rc->write_yaml("app", "base", "http://" . $host_name);
+    $rc->ymlToJson("app");
     return require __DIR__ . "/../help/help.php";
 }
 
 if ($uri == "rsa") {
     return require __DIR__ . "/../../.rsa/create_pem.php";
 }
-
 
 
 require_once __DIR__ . "/error_dispose.php";
@@ -92,7 +105,7 @@ if (file_exists($file)) {
             require_once __DIR__ . '/../../seraphine/return_data/return_data.php';
             exit;
         }
-    }else{
+    } else {
         $controller = new $className();
         $res = $controller->$method();
         G::set("response_data_g441g6aw8g4wg", $res);

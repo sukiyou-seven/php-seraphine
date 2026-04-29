@@ -6,7 +6,6 @@ require_once __DIR__."/../../seraphine/receive_data/receive_data.php";
 require_once __DIR__."/../../seraphine/database/mongodb_client.php";
 
 use rec\ReceiveData;
-//use mongoself\MongoDB_Connect;
 
 class Order
 {
@@ -50,8 +49,3 @@ class Order
     }
 }
 
-
-//$a = new User();
-//$res = $a->login();
-//
-//print_r($res);

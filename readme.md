@@ -44,15 +44,20 @@ debug: false
 ### 伪静态
 
 ``` apacheconf
-location / {
-    try_files $uri $uri/ /index.php?$query_string;
+# Vue 打包文件目录
+location /dist/ {
+    # 这里是为了 可以访问 api页面 不写这个location 那就访问 /openapi1.0 也能看到 api页面
+    # 这两个页面都需要开启 debug
+    alias /www/wwwroot/填写你的域名或文件夹/seraphine/auto_api/dist/;
+    try_files $uri $uri/ =404;
+    
+    # 处理 Vue Router 的 history 模式
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
 }
 
-error_page 404 /404.html;
-error_page 403 /403.html;
-error_page 500 /500.php;
-error_page 502 /502.html;
-error_page 320 /320.php;
 ```
 
 ### 已装修页面
