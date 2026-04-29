@@ -58,6 +58,12 @@ location /dist/ {
     }
 }
 
+error_page 404 /404.html;
+error_page 403 /403.html;
+error_page 500 /500.php;
+error_page 502 /502.html;
+error_page 320 /320.php;
+
 ```
 
 ### 已装修页面
