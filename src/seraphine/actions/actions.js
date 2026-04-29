@@ -1,7 +1,10 @@
 import axios from 'axios'
 
+let baseURL = "http://pay.rubyonly.cn"
+baseURL = localStorage.getItem("BASE_URL") || "http://pay.rubyonly.cn"
+
 const service = axios.create({
-    baseURL: 'http://pay.rubyonly.cn',
+    baseURL: baseURL,
     timeout: 5000,
     headers: {
         'Content-Type': 'application/json'

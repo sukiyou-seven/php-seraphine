@@ -7,6 +7,19 @@ import 'element-plus/dist/index.css'
 import App from './App.vue'
 
 
+const read_config = async () => {
+    const response = await fetch("../../../config/app.json")
+    return await response.json();
+}
+
+async function init() {
+    let config = await read_config();
+    localStorage.setItem("BASE_URL", config.base)
+    // localStorage.setItem("platform_name", config.name)
+}
+init()
+
+
 
 const app = createApp(App)
 
