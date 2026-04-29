@@ -22,7 +22,7 @@ class Order
      *   "email": "zhangsan@example.com"
      * }
      */
-    public static function mongo_test()
+    public static function mongo_test($username,$email)
     {
         $mg = new MongoDB_Client();
         $mg->insertOne("test1",
@@ -32,21 +32,21 @@ class Order
     }
 
     /**
-     * 用户登录
+     * 测试 post/get 参数
      * @param string $username 用户名
      * @param string $password 密码
      * @return array 用户信息
      */
-    public static function test500()
+    public static function get_post_test()
     {
 //        $a = 0/0;
         $rec = ReceiveData::rec();
 //        print_r($rec);
 
-        G::set("code","USER_ERROR_0001");
+//        G::set("code","USER_ERROR_0001");
 
-        return array("username" => "admin", "password" => "<PASSWORD>",
-            "e"=>"dd");
+
+        return $rec;
     }
 }
 

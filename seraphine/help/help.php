@@ -8,21 +8,25 @@ if ($action === 'get_db_config') {
     $dbConfigPath = __DIR__ . '/../../config/db.yml';
     $dbMysqlConfigPath = __DIR__ . '/../../config/db_mysql.yml';
 
-    if (file_exists($dbConfigPath) ) {
+    $result = ['success' => true];
+
+    if (file_exists($dbConfigPath)) {
         $content = file_get_contents($dbConfigPath);
         $config = parseYamlSimple($content);
-
-        echo json_encode([
-                'success' => true,
-                'mongodb' => isset($config['mongodb']) ? $config['mongodb'] : [],
-                'mysql' => isset($config['mysql']) ? $config['mysql'] : []
-        ]);
+        $result['mongodb'] = isset($config['mongodb']) ? $config['mongodb'] : [];
     } else {
-        echo json_encode([
-                'success' => false,
-                'message' => '配置文件不存在'
-        ]);
+        $result['mongodb'] = [];
     }
+
+    if (file_exists($dbMysqlConfigPath)) {
+        $content = file_get_contents($dbMysqlConfigPath);
+        $config = parseYamlSimple($content);
+        $result['mysql'] = isset($config['mysql']) ? $config['mysql'] : [];
+    } else {
+        $result['mysql'] = [];
+    }
+
+    echo json_encode($result);
     exit;
 }
 
@@ -82,18 +86,18 @@ if ($action === 'save_mysql_config') {
         exit;
     }
 
-    $dbConfigPath = __DIR__ . '/../../config/db.yml';
+    $dbMysqlConfigPath = __DIR__ . '/../../config/db_mysql.yml';
 
     try {
         $existingConfig = [];
-        if (file_exists($dbConfigPath)) {
-            $content = file_get_contents($dbConfigPath);
+        if (file_exists($dbMysqlConfigPath)) {
+            $content = file_get_contents($dbMysqlConfigPath);
             $existingConfig = parseYamlSimple($content);
         }
 
         $yamlContent = generateMysqlYaml($config, $existingConfig);
 
-        if (file_put_contents($dbConfigPath, $yamlContent) !== false) {
+        if (file_put_contents($dbMysqlConfigPath, $yamlContent) !== false) {
             echo json_encode(['success' => true]);
         } else {
             echo json_encode([
@@ -136,17 +140,7 @@ function parseYamlSimple($content)
 
 function generateMongoDbYaml($config, $existingConfig)
 {
-    $yaml = "";
-
-    if (isset($existingConfig['mysql']) && !empty($existingConfig['mysql'])) {
-        $yaml .= "mysql:\n";
-        foreach ($existingConfig['mysql'] as $key => $value) {
-            $yaml .= "    {$key}: {$value}\n";
-        }
-        $yaml .= "\n";
-    }
-
-    $yaml .= "mongodb:\n";
+    $yaml = "mongodb:\n";
     $yaml .= "    host: " . (isset($config['host']) ? $config['host'] : 'localhost') . "\n";
     $yaml .= "    port: " . (isset($config['port']) ? $config['port'] : '27017') . "\n";
     $yaml .= "    database: " . (isset($config['database']) ? $config['database'] : 'test') . "\n";
@@ -159,17 +153,7 @@ function generateMongoDbYaml($config, $existingConfig)
 
 function generateMysqlYaml($config, $existingConfig)
 {
-    $yaml = "";
-
-    if (isset($existingConfig['mongodb']) && !empty($existingConfig['mongodb'])) {
-        $yaml .= "mongodb:\n";
-        foreach ($existingConfig['mongodb'] as $key => $value) {
-            $yaml .= "    {$key}: {$value}\n";
-        }
-        $yaml .= "\n";
-    }
-
-    $yaml .= "mysql:\n";
+    $yaml = "mysql:\n";
     $yaml .= "    host: " . (isset($config['host']) ? $config['host'] : 'localhost') . "\n";
     $yaml .= "    port: " . (isset($config['port']) ? $config['port'] : '3306') . "\n";
     $yaml .= "    database: " . (isset($config['database']) ? $config['database'] : 'test') . "\n";
@@ -192,12 +176,17 @@ $baseUrl .= $_SERVER['HTTP_HOST'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seraphine 帮助 文档</title>
     <link rel="stylesheet" href="../../static/css/help.css">
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
 </head>
 <body>
 <div class="sidebar">
     <h3>📑 目录导航</h3>
     <ul class="nav-list">
-        <li><a href="#api-doc" class="active">📚 API 文档</a></li>
+        <li><a href="#attention" class="active">⚠ 注意事项</a></li>
+        <li><a href="#api-doc">📚 API 文档</a></li>
+        <li><a href="#rsa-doc">🔑 RSA 密钥</a></li>
+        <li><a href="#mongodb_setting">📦 MongoDB 设置</a></li>
+        <li><a href="#mysql_setting">📦 Mysql 设置</a></li>
         <li><a href="#routing">📍 路由规则</a></li>
         <li><a href="#request">📝 请求数据</a></li>
         <li><a href="#response">📤 响应格式</a></li>
@@ -210,22 +199,51 @@ $baseUrl .= $_SERVER['HTTP_HOST'];
         <h1>🚀 Seraphine 帮助</h1>
         <p>轻量级 PHP API 框架文档</p>
     </div>
+    <div class="card" id="attention">
+        <h2>⚠ 注意事项</h2>
+        <div class="info-box warning">
+            <strong>⚠️ 注意：</strong>该页面 在 <code>debug = false</code> 的状态下不可访问
+        </div>
 
+        <div class="info-box warning">
+            <strong>⚠️ 注意：</strong>请在 <code>根目录/index.php</code> 文件中更改 <code>$sign_secret</code> 值
+            可使用 <code>根目录/sign_create.php</code> 生成
+        </div>
+        <div class="info-box warning">
+            <strong>⚠️ 注意：</strong> 请仔细阅读本页面
+        </div>
+
+        <div class="info-box warning">
+            <strong>⚠️ 注意：</strong> 在 debug 模式下,支持以GET方式传递参数
+            <code>?a=1&b=2&c=3</code><br/>
+            但这只是暂时的测试功能，请勿用于生产环境
+        </div>
+    </div>
     <div class="card" id="api-doc">
         <h2>📚 API 接口文档</h2>
         <div class="route-example">
             <div><strong>访问地址：</strong><a href="<?php echo $baseUrl; ?>/openapi" target="_blank"
-                                              style="color: #667eea; text-decoration: none;"><?php echo $baseUrl; ?>
-                    /openapi</a></div>
-            <div style="margin-top: 10px; color: #718096;">自动生成 · 实时同步 · 完整详细</div>
+                                              style="color: #667eea; text-decoration: none;">
+                    <?php echo $baseUrl; ?>/openapi</a></div>
+            <div style="margin-top: 10px; color: #718096;">自动生成 · 实时同步 · 完整详细· <code>完成本页面后回来再看</code></div>
         </div>
     </div>
 
-    <div class="card" id="setting">
-        <h2>⚙ 数据库设置</h2>
+    <div class="card" id="rsa-doc">
+        <h2>🔑 RSA </h2>
+        <div class="route-example">
+            <div><strong>访问地址：</strong><a href="<?php echo $baseUrl; ?>/rsa" target="_blank"
+                                              style="color: #667eea; text-decoration: none;">
+                    <?php echo $baseUrl; ?>/rsa</a></div>
+            <div style="margin-top: 10px; color: #718096;">自动生成 · <code>请先去生成</code></div>
+        </div>
+    </div>
+
+
+    <div class="card" id="mysql_setting">
+        <h2>📦 MongoDB数据库设置</h2>
 
         <div style="margin-bottom: 30px;">
-            <h3 style="color: #667eea; margin-bottom: 15px;">MongoDB 配置</h3>
             <div class="route-example">
                 <form id="mongodb-config-form" style="max-width: 600px;">
                     <div style="margin-bottom: 15px;">
@@ -276,8 +294,12 @@ $baseUrl .= $_SERVER['HTTP_HOST'];
             </div>
         </div>
 
+    </div>
+    <div class="card" id="mongodb_setting">
+        <h2>📦 Mysql 数据库设置</h2>
+
+
         <div>
-            <h3 style="color: #667eea; margin-bottom: 15px;">MySQL 配置</h3>
             <div class="route-example">
                 <form id="mysql-config-form" style="max-width: 600px;">
                     <div style="margin-bottom: 15px;">
@@ -398,11 +420,11 @@ $baseUrl .= $_SERVER['HTTP_HOST'];
         <div class="section">
             <h3>标准响应结构</h3>
             <div class="file-tree">
-                {
-                "<span class="method">code</span>": "00000",
-                "<span class="method">message</span>": "success",
-                "<span class="method">data</span>": {}
-                }
+                <pre class="json-font">{
+<span class="method json-font ">"code"</span>:<span class="json-font">"0000"</span>,
+<span class="method json-font ">"message"</span>:<span class="json-font">"success"</span>,
+<span class="method json-font ">"data"</span>:<span class="json-font">[] / {}</span>
+}</pre>
             </div>
         </div>
 
@@ -416,34 +438,93 @@ $baseUrl .= $_SERVER['HTTP_HOST'];
 
         <div class="section">
             <h3>🗄️ MongoDB 数据库</h3>
-            <div class="route-example">
-                require __DIR__ . '/../../seraphine/database/mongodb_client.php';<br><br>
-                $mongo = new MongoDB_Client();<br><br>
-                // 插入数据<br>
-                $result = $mongo->insertOne('users', ['name' => 'admin']);<br><br>
-                // 查询数据<br>
-                $user = $mongo->findOne('users', ['name' => 'admin']);<br><br>
-                // 更新数据<br>
-                $mongo->updateOne('users', ['name' => 'admin'], ['$set' => ['age' => 25]]);
+            <div class="route-example" id="mk1">
+<!--                require __DIR__ . '/../../seraphine/database/mongodb_client.php';<br><br>-->
+<!--                $mongo = new MongoDB_Client();<br><br>-->
+<!--                // 插入数据<br>-->
+<!--                $result = $mongo->insertOne('users', ['name' => 'admin']);<br><br>-->
+<!--                // 查询数据<br>-->
+<!--                $user = $mongo->findOne('users', ['name' => 'admin']);<br><br>-->
+<!--                // 更新数据<br>-->
+<!--                $mongo->updateOne('users', ['name' => 'admin'], ['$set' => ['age' => 25]]);-->
             </div>
+            <script>
+                const md = window.markdownit(); // 初始化
+
+                const markdown = `
+\`\`\`php
+
+require __DIR__ . '/../../seraphine/database/mongodb_client.php';
+
+$mongo = new MongoDB_Client();
+
+// 插入数据
+$result = $mongo->insertOne('users', ['name' => 'admin']);
+
+// 查询数据
+$user = $mongo->findOne('users', ['name' => 'admin']);
+
+// 更新数据
+$mongo->updateOne('users', ['name' => 'admin'], ['$set' => ['age' => 25]]);
+\`\`\`
+
+`;
+
+                document.getElementById('mk1').innerHTML = md.render(markdown);
+            </script>
         </div>
 
         <div class="section">
             <h3>🗄️ MySQL 数据库</h3>
-            <div class="route-example">
-                require __DIR__ . '/../../seraphine/database/mysql_client.php';<br><br>
-                $mysql = new MySQLClient();<br><br>
-                // 插入数据<br>
-                $result = $mysql->insertOne('users', ['name' => 'admin', 'email' => 'admin@example.com']);<br><br>
-                // 查询数据<br>
-                $user = $mysql->findOne('users', ['name' => 'admin']);<br><br>
-                // 更新数据<br>
-                $mysql->update('users', ['age' => 25], ['name' => 'admin']);<br><br>
-                // 事务操作<br>
-                $mysql->beginTransaction();<br>
-                // ... 执行多个操作 ...<br>
-                $mysql->commit();
+            <div class="route-example" id="tt2">
+<!--                require __DIR__ . '/../../seraphine/database/mysql_client.php';<br><br>-->
+<!--                $mysql = new MySQLClient();<br><br>-->
+<!--                // 插入数据<br>-->
+<!--                $result = $mysql->insertOne('users', ['name' => 'admin', 'email' => 'admin@example.com']);<br><br>-->
+<!--                // 查询数据<br>-->
+<!--                $user = $mysql->findOne('users', ['name' => 'admin']);<br><br>-->
+<!--                // 更新数据<br>-->
+<!--                $mysql->update('users', ['age' => 25], ['name' => 'admin']);<br><br>-->
+<!--                // 事务操作<br>-->
+<!--                $mysql->beginTransaction();<br>-->
+<!--                // ... 执行多个操作 ...<br>-->
+<!--                $mysql->commit();-->
             </div>
+
+            <script>
+                // const md = window.markdownit(); // 初始化
+
+                const markdown2 = `
+\`\`\`php
+
+require __DIR__ . '/../../seraphine/database/mysql_client.php';
+
+$mysql = new MySQLClient();
+
+// 插入数据
+$result = $mysql->insertOne(
+        'users',
+        ['name' => 'admin', 'email' => 'admin@example.com']
+    );
+
+// 查询数据
+$user = $mysql->findOne('users', ['name' => 'admin']);
+
+// 更新数据
+$mysql->update('users', ['age' => 25], ['name' => 'admin']);
+
+// 事务操作
+$mysql->beginTransaction();
+
+// ... 执行多个操作 ...
+$mysql->commit();
+
+\`\`\`
+
+`;
+
+                document.getElementById('tt2').innerHTML = md.render(markdown2);
+            </script>
         </div>
 
         <div class="section">

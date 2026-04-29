@@ -1,9 +1,10 @@
 <?php
 session_start();
-$error_json = $_SESSION['api_response_json'] ?? null;
+$send_data = $_SESSION['api_response_json'] ?? null;
 unset($_SESSION['api_response_json']);  // 清除，避免泄露
 // 把PHP数据转为合法JSON，供前端调用
-$apiJson = $error_json;
+$apiJson = json_encode($send_data, JSON_PRETTY_PRINT, JSON_UNESCAPED_UNICODE);
+//print_r($error_json);
 
 require_once __DIR__. "/seraphine/config/read_config.php";
 

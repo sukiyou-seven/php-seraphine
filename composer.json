@@ -3,6 +3,7 @@
         "symfony/yaml": "7.2",
         "firebase/php-jwt": "*",
         "spomky-labs/otphp": "*",
-        "ext-mongodb": "*"
+        "ext-mongodb": "*",
+        "ext-openssl": "*"
     }
 }
