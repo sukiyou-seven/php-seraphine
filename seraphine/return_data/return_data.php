@@ -9,12 +9,39 @@ $code = G::get("code", "success");
 $constant_name = 'error_code\\' . strtoupper($code);
 $error_code = defined($constant_name) ? constant($constant_name) : \error_code\SUCCESS;
 
-$output = G::get("response_data_g441g6aw8g4wg", array());
+$output = G::get("response_data_seraphine");
+
+try {
+    foreach ($output as $key => $value) {
+        if ($key == "_id") {
+            $output['id'] = (string)$value;
+            unset($output['_id']);
+        }
+        if ($key == "password") {
+            $value = "密码保护协议";
+        }
+    }
+} catch (Exception $e) {
+
+}
+
+try {
+    $output['id'] = (string)$output['_id'];
+    unset($output['_id']);
+    $output['password'] = "密码保护协议";
+} catch (Exception $e) {
+}
+
+try {
+    $token = G::get("token", false);
+} catch (Exception $e) {
+}
 
 $send_data = array(
     'code' => $error_code['code'],
     'message' => $error_code['message'],
-    'data' => $output
+    'data' => $output,
+    'X-Token' => $token
 );
 
 $nums = G::get("nums", false);

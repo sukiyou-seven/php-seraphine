@@ -5,12 +5,3 @@ mongodb:
     username: test1
     password: L8cM3ei7YnwzjdBe
     auth_source: test1
-
-mysql:
-    host: 43.165.185.58
-    port: 3306
-    database: test1
-    username: test1
-    password: L8cM3ei7YnwzjdBe
-    charset: utf8mb4
-    time_zone: +08:00

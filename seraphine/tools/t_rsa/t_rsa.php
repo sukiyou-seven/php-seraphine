@@ -1,4 +1,7 @@
 <?php
+
+require_once __DIR__ . '/../../g/g.php';
+
 class RSA
 {
     private static $privateKey = null;
@@ -12,13 +15,34 @@ class RSA
      */
     public static function init($privateKeyPath = null, $publicKeyPath = null)
     {
-        if ($privateKeyPath && file_exists($privateKeyPath)) {
-            self::$privateKey = file_get_contents($privateKeyPath);
+        if ($privateKeyPath) {
+            if (!file_exists($privateKeyPath)) {
+                throw new Exception("Private key file not found: " . $privateKeyPath);
+            }
+
+            $privateKeyContent = file_get_contents($privateKeyPath);
+            if ($privateKeyContent === false) {
+                throw new Exception("Failed to read private key file: " . $privateKeyPath);
+            }
+
+            self::$privateKey = $privateKeyContent;
         }
 
-        if ($publicKeyPath && file_exists($publicKeyPath)) {
-            self::$publicKey = file_get_contents($publicKeyPath);
+        if ($publicKeyPath) {
+            if (!file_exists($publicKeyPath)) {
+                throw new Exception("Public key file not found: " . $publicKeyPath);
+            }
+
+            $publicKeyContent = file_get_contents($publicKeyPath);
+            if ($publicKeyContent === false) {
+                throw new Exception("Failed to read public key file: " . $publicKeyPath);
+            }
+
+            self::$publicKey = $publicKeyContent;
         }
+
+        error_log("RSA initialized - Private key: " . (self::$privateKey ? 'loaded' : 'not loaded') .
+                  ", Public key: " . (self::$publicKey ? 'loaded' : 'not loaded'));
     }
 
     /**
@@ -50,14 +74,16 @@ class RSA
     public static function sign($data)
     {
         if (empty(self::$privateKey)) {
-            throw new Exception('Private key not initialized');
+            G::set("response_data_seraphine", "Private key not initialized");
+            return "Private key not initialized";
         }
 
         $signature = '';
         $result = openssl_sign($data, $signature, self::$privateKey, OPENSSL_ALGO_SHA256);
 
         if (!$result) {
-            throw new Exception('Failed to generate signature: ' . openssl_error_string());
+            G::set("response_data_seraphine", 'Failed to generate signature: ' . openssl_error_string());
+            return 'Failed to generate signature';
         }
 
         return base64_encode($signature);
@@ -84,6 +110,104 @@ class RSA
         $result = openssl_verify($data, $decodedSignature, self::$publicKey, OPENSSL_ALGO_SHA256);
 
         return $result === 1;
+    }
+
+    /**
+     * 使用公钥加密数据（前端用公钥加密，服务端用私钥解密）
+     *
+     * @param string $data 待加密数据
+     * @return string Base64编码的加密数据
+     */
+    public static function publicEncrypt($data)
+    {
+        if (empty(self::$publicKey)) {
+            throw new Exception('Public key not initialized');
+        }
+
+        $encrypted = '';
+        $result = openssl_public_encrypt($data, $encrypted, self::$publicKey, OPENSSL_PKCS1_OAEP_PADDING);
+
+        if (!$result) {
+            throw new Exception('Failed to encrypt data: ' . openssl_error_string());
+        }
+
+        return base64_encode($encrypted);
+    }
+
+    /**
+     * 使用私钥解密数据（服务端用私钥解密前端加密的数据）
+     *
+     * @param string $encryptedData Base64编码的加密数据
+     * @return string 解密后的数据
+     */
+    public static function privateDecrypt($encryptedData)
+    {
+        if (empty(self::$privateKey)) {
+            throw new Exception('Private key not initialized');
+        }
+
+        $decodedData = base64_decode($encryptedData);
+        if ($decodedData === false) {
+            throw new Exception('Invalid encrypted data format');
+        }
+
+        $decrypted = '';
+        $result = openssl_private_decrypt($decodedData, $decrypted, self::$privateKey, OPENSSL_PKCS1_OAEP_PADDING);
+
+        if (!$result) {
+            throw new Exception('Failed to decrypt data: ' . openssl_error_string());
+        }
+
+        return $decrypted;
+    }
+
+    /**
+     * 使用私钥加密数据（服务端签名响应）
+     *
+     * @param string $data 待加密数据
+     * @return string Base64编码的加密数据
+     */
+    public static function privateEncrypt($data)
+    {
+        if (empty(self::$privateKey)) {
+            throw new Exception('Private key not initialized');
+        }
+
+        $encrypted = '';
+        $result = openssl_private_encrypt($data, $encrypted, self::$privateKey, OPENSSL_PKCS1_OAEP_PADDING);
+
+        if (!$result) {
+            throw new Exception('Failed to encrypt data: ' . openssl_error_string());
+        }
+
+        return base64_encode($encrypted);
+    }
+
+    /**
+     * 使用公钥解密数据（前端验证服务端响应）
+     *
+     * @param string $encryptedData Base64编码的加密数据
+     * @return string 解密后的数据
+     */
+    public static function publicDecrypt($encryptedData)
+    {
+        if (empty(self::$publicKey)) {
+            throw new Exception('Public key not initialized');
+        }
+
+        $decodedData = base64_decode($encryptedData);
+        if ($decodedData === false) {
+            throw new Exception('Invalid encrypted data format');
+        }
+
+        $decrypted = '';
+        $result = openssl_public_decrypt($decodedData, $decrypted, self::$publicKey, OPENSSL_PKCS1_OAEP_PADDING);
+
+        if (!$result) {
+            throw new Exception('Failed to decrypt data: ' . openssl_error_string());
+        }
+
+        return $decrypted;
     }
 
     /**
@@ -121,7 +245,9 @@ class RSA
             $publicKeyPath = rtrim($outputDir, '/') . '/public_key.pem';
 
             file_put_contents($privateKeyPath, $privateKey);
+            chmod($privateKeyPath, 0600);
             file_put_contents($publicKeyPath, $publicKey);
+            chmod($publicKeyPath, 0644);
 
             return [
                 'private_key' => $privateKeyPath,

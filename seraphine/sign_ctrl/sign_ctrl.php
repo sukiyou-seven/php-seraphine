@@ -1,125 +1,102 @@
 <?php
 require_once __DIR__ . '/../g/g.php';
 require_once __DIR__ . '/../error_code/error_code.php';
-require_once __DIR__ . '/../tools/t_sha256/t_sha256.php';
 
-$sign_secret = G::get("sign_secret");
-
-class SignCtrl
+class ResponseSignCtrl
 {
-    private static $sign_secret;
-
-    public static function init($secret)
+    /**
+     * 为响应数据生成签名（服务端使用私钥签名）
+     *
+     * @param mixed $responseData 响应数据
+     * @return array 包含数据和签名的数组
+     */
+    public static function signResponse($responseData)
     {
-        self::$sign_secret = $secret;
+        $timestamp = time();
+        $nonceStr = bin2hex(random_bytes(8));
+
+        // 将响应数据转换为字符串
+        $dataString = is_array($responseData) ? json_encode($responseData, JSON_UNESCAPED_UNICODE) : strval($responseData);
+
+        // 构建签名字符串
+        $signString = $dataString . '&timestamp=' . $timestamp . '&nonceStr=' . $nonceStr;
+
+        // 使用私钥生成签名
+        $signature = RSA::sign($signString);
+
+        return [
+            'data' => $responseData,
+            'signature' => $signature,
+            'timestamp' => $timestamp,
+            'nonceStr' => $nonceStr
+        ];
     }
 
     /**
-     * 验证客户端签名
+     * 验证请求签名（使用公钥验证客户端签名）
      *
      * @return bool 签名是否有效
      */
-    public static function verify()
+    public static function verifyRequest()
     {
-        if (empty(self::$sign_secret)) {
-            return false;
-        }
-
         $sign = self::getSignFromHeader();
 
         if (empty($sign)) {
-            self::setError('missing_sign');
+            G::set("response_data_seraphine", "missing_sign");
             return false;
         }
 
         $timestamp = self::getTimestampFromHeader();
-
         if (empty($timestamp)) {
-            self::setError('missing_timestamp');
+            G::set("response_data_seraphine", "missing_timestamp");
             return false;
         }
 
         if (!self::checkTimestamp($timestamp)) {
-            self::setError('timestamp_expired');
+            G::set("response_data_seraphine", "timestamp_expired");
             return false;
         }
 
         $requestData = self::getRequestData();
-        $expectedSign = self::generateSign($requestData, $timestamp);
+        $nonceStr = self::getNonceStrFromHeader();
 
-        if (!hash_equals($expectedSign, $sign)) {
-            self::setError('invalid_sign');
+        // 构建待验证的签名字符串
+        $dataString = is_array($requestData) ? json_encode($requestData, JSON_UNESCAPED_UNICODE) : strval($requestData);
+        $signString = $dataString . '&timestamp=' . $timestamp . '&nonceStr=' . $nonceStr;
+
+        // 使用公钥验证签名
+        $isValid = RSA::verify($signString, $sign);
+
+        if (!$isValid) {
+            G::set("response_data_seraphine", "invalid_sign");
             return false;
         }
 
         return true;
     }
 
-    /**
-     * 从请求头获取签名
-     */
     private static function getSignFromHeader()
     {
-        if (isset($_SERVER['HTTP_SIGN'])) {
-            return $_SERVER['HTTP_SIGN'];
-        }
-        return '';
+        return isset($_SERVER['HTTP_X_SIGNATURE']) ? $_SERVER['HTTP_X_SIGNATURE'] : '';
     }
 
-    /**
-     * 从请求头获取时间戳
-     */
     private static function getTimestampFromHeader()
     {
-        if (isset($_SERVER['HTTP_TIMESTAMP'])) {
-            return $_SERVER['HTTP_TIMESTAMP'];
-        }
-        return '';
+        return isset($_SERVER['HTTP_X_TIMESTAMP']) ? $_SERVER['HTTP_X_TIMESTAMP'] : '';
     }
 
-    /**
-     * 获取请求数据
-     */
+    private static function getNonceStrFromHeader()
+    {
+        return isset($_SERVER['HTTP_X_NONCESTR']) ? $_SERVER['HTTP_X_NONCESTR'] : '';
+    }
+
     private static function getRequestData()
     {
         $data = file_get_contents("php://input");
         $decoded = json_decode($data, true);
-
-        if ($decoded === null) {
-            return $data;
-        }
-
-        return $decoded;
+        return $decoded === null ? $data : $decoded;
     }
 
-    /**
-     * 生成签名
-     *
-     * @param mixed $data 请求数据
-     * @param int $timestamp 时间戳
-     * @return string 签名字符串
-     */
-    private static function generateSign($data, $timestamp)
-    {
-        if (is_array($data)) {
-            ksort($data);
-            $queryString = http_build_query($data);
-        } else {
-            $queryString = $data;
-        }
-
-        $signString = $queryString . '&timestamp=' . $timestamp . '&secret=' . self::$sign_secret;
-
-        return RSA::sign($signString);
-    }
-
-    /**
-     * 检查时间戳是否有效（防止重放攻击）
-     *
-     * @param int $timestamp 客户端时间戳
-     * @param int $tolerance 允许的误差范围（秒），默认300秒
-     * @return bool 是否有效
-     */
     private static function checkTimestamp($timestamp, $tolerance = 300)
     {
         if (!is_numeric($timestamp)) {
@@ -128,33 +105,6 @@ class SignCtrl
 
         $currentTime = time();
         $timeDiff = abs($currentTime - intval($timestamp));
-
         return $timeDiff <= $tolerance;
     }
-
-    /**
-     * 设置错误码
-     */
-    private static function setError($errorCode)
-    {
-        G::set("code", $errorCode);
-    }
-
-    /**
-     * 创建签名（用于服务端生成签名示例）
-     *
-     * @param mixed $data 请求数据
-     * @param int $timestamp 时间戳
-     * @return string 签名字符串
-     */
-    public static function createSign($data, $timestamp = null)
-    {
-        if ($timestamp === null) {
-            $timestamp = time();
-        }
-
-        return self::generateSign($data, $timestamp);
-    }
 }
-
-SignCtrl::init($sign_secret);

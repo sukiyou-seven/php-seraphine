@@ -1,6 +1,8 @@
 <?php
 
-require __DIR__ . "/../g/g.php";
+require_once __DIR__ . "/../g/g.php";
+
+require_once __DIR__ . "/../config/read_config.php";
 
 //print_r($_SERVER['REQUEST_URI']);
 
@@ -57,7 +59,7 @@ if ($uri == "open_api") {
 }
 
 if ($uri == "help") {
-    require_once __DIR__ . "/../config/read_config.php";
+
     $host_name = $_SERVER['HTTP_HOST'];
     $rc = new ReadConfig();
     $rc->write_yaml("app", "base", "http://" . $host_name);
@@ -93,23 +95,30 @@ if (file_exists($file)) {
     $className = ucfirst($parts[count($parts) - 2]);  // User
     $method = $parts[count($parts) - 1] ?? 'index';   // info
 
-    if (!$app_config['app']['debug']) {
-        // 实例化并调用
-        $controller = new $className();
-        $res = $controller->$method();
+    // 实例化并调用
+    # debug模式下 我们洗一个 setcookie?
 
-        require_once __DIR__ . '/../../seraphine/sign_ctrl/sign_ctrl.php';
-        if (!SignCtrl::verify()) {
-            G::set("code", "USER_ERROR_A0341");
-            G::set("response_data_g441g6aw8g4wg", "");
-            require_once __DIR__ . '/../../seraphine/return_data/return_data.php';
-            exit;
+//    if (!$app_config['app']['debug']) {
+//        # debug 模式下
+//
+//    }
+
+    $publicApis = ReadConfig::read_yml("token")['token']['pass_route'];
+
+    if(!in_array($uri, $publicApis)){
+//            X_ACCESS_TOKEN
+        # check token
+        $user_token = Token::verifyRequestToken();
+        if (!$user_token) {
+//            G::set("code","A0200_1");
+            G::set("response_data_seraphine",$uri);
+            require_once __DIR__ . "/../../seraphine/return_data/return_data.php";
+            exit();
         }
-    } else {
-        $controller = new $className();
-        $res = $controller->$method();
-        G::set("response_data_g441g6aw8g4wg", $res);
     }
+    $controller = new $className();
+    $res = $controller->$method();
+    G::set("response_data_seraphine", $res);
 
     # 格式化返回值
     require_once __DIR__ . "/../../seraphine/return_data/return_data.php";

@@ -6,6 +6,7 @@ use MongoDB\Driver\Manager;
 use MongoDB\Driver\Query;
 use MongoDB\Driver\BulkWrite;
 use MongoDB\Driver\Command;
+use MongoDB\Client as MongoClient;
 
 /**
  * MongoDB 客户端封装类
@@ -16,7 +17,7 @@ class MongoDB_Client
     private Manager $manager;
     private string $database;
     private array $config;
-
+    private MongoClient $mongoClient;
     /**
      * 构造函数 - 初始化 MongoDB 连接
      *
@@ -39,9 +40,22 @@ class MongoDB_Client
         try {
             $this->manager = new Manager($mongo_uri);
             $this->database = $dbname;
+            $this->mongoClient = new MongoClient($mongo_uri);
         } catch (Exception $e) {
             throw new Exception("MongoDB 连接失败: " . $e->getMessage());
         }
+    }
+
+
+    /**
+     * 获取 MongoDB Collection 对象（用于高级操作）
+     *
+     * @param string $collection 集合名称
+     * @return
+     */
+    public function getCollection(string $collection)
+    {
+        return $this->mongoClient->{$this->database}->{$collection};
     }
 
     /**

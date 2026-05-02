@@ -106,8 +106,8 @@ class PemGenerator
  */
 
 return [
-    'rsa_private_key_path' => __DIR__ . '/keys/private_key.pem',
-    'rsa_public_key_path' => __DIR__ . '/keys/public_key.pem',
+    'rsa_private_key_path' => __DIR__ . '/private_key.pem',
+    'rsa_public_key_path' => __DIR__ . '/public_key.pem',
     'rsa_key_bits' => KEY_BITS_PLACEHOLDER,
 ];
 PHP;

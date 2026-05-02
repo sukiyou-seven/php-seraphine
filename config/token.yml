@@ -1,0 +1,6 @@
+token:
+  issuer: seraphine
+  audience: seraphine
+  secret: b76d016f63b88aa82eadca0954027b72c6d10126d9f4e495704f5377073f986c
+#  不带前导的路由
+  pass_route: ["user/create_user","user/login"]

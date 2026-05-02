@@ -110,6 +110,7 @@ namespace error_code {
 
 
     const USER_ERROR_A0290 = array("code" => "A0290", "message" => "该房间不存在", "data" => "", "num" => "", "status" => "");
+    const USER_ERROR_A0404 = array("code" => "A0404", "message" => "token获取失败", "data" => "", "num" => "", "status" => "");
 
 
 # /**

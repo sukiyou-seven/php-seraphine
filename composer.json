@@ -4,6 +4,7 @@
         "firebase/php-jwt": "*",
         "spomky-labs/otphp": "*",
         "ext-mongodb": "*",
-        "ext-openssl": "*"
+        "ext-openssl": "*",
+        "mongodb/mongodb":"*"
     }
 }

@@ -31,7 +31,7 @@ class Auto_open_api
 
             $className = ucfirst($filename);
 
-            if (!preg_match('/class\s+' . $className . '\s*\{/i', $content)) {
+            if (!preg_match('/class\s+' . preg_quote($className, '/') . '\s*(?:extends\s+\w+)?\s*(?:implements\s+[\w,\s]+)?\s*\{/i', $content)) {
                 continue;
             }
 
